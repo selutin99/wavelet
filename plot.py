@@ -5,6 +5,34 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
+def plot_wavelet_map(
+        signal_name: str,
+        coefficients: np.ndarray,
+        frequencies: np.ndarray,
+):
+    """
+    Отображает карту вейвлет-преобразования для заданного сигнала
+
+    :param signal_name: Название сигнала
+    :param coefficients: Коэффициенты вейвлет-преобразования
+    :param frequencies: Частоты, соответствующие коэффициентам
+    """
+    plt.figure(figsize=(10, 6))
+    plt.imshow(
+        np.abs(coefficients),
+        extent=(0, 1, frequencies[-1], frequencies[0]),
+        cmap='jet',
+        aspect='auto',
+        interpolation='nearest'
+    )
+    plt.colorbar(label='Модуль коэффициентов')
+    plt.xlabel('Время')
+    plt.ylabel('Амплитуда')
+    plt.title(f'Вейвлет-преобразование сигнала: ({signal_name})')
+
+    __save_or_show_plot(signal_name)
+
+
 def plot_frequency_map(
         signal_name: str,
         classification: np.ndarray,
@@ -37,10 +65,7 @@ def plot_frequency_map(
     plt.ylabel('Амплитуда')
     plt.title(f'Карта сигнала {signal_name}')
 
-    # Добавление легенды
     __add_classification_legend(im)
-
-    # Сохранение или отображение графика
     __save_or_show_plot(signal_name)
 
 
