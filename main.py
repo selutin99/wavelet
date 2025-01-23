@@ -1,42 +1,45 @@
+import os
+
 import numpy as np
 
 from frequency_classifier import classify_frequencies
-from plot import plot_frequency_map, plot_wavelet_map
+from plot import plot_classification_map, plot_wavelet_map
 from reader import read_signals
 from wavelet_transformer import compute_wavelet_transform
 
 
 def main(
         file_path: str,
-        excitation_frequency: float,
-        scales=np.arange(1, 128)
+        omega: int
 ):
     # TODO: рисовать карты нескольких сигналов в цикле
     # Считывание сигналов
     signals = read_signals(file_path=file_path, delimiter=' ')
-    time = signals.index
-    signal_name = signals.columns[1]
-    signal = signals.iloc[:, 1]  # Работаем с первым сигналом
+    time = signals[:, 0]
+    signal_name = 'hk100_1_q0_150_gam0_O_kk100000'
+    signal = signals[:, 1]  # Работаем с первым сигналом
 
     # Вейвлет-преобразование
-    coefficients, frequencies = compute_wavelet_transform(
+    time, frequencies, coefficients = compute_wavelet_transform(
         signal=signal,
-        scales=scales,
+        time=time,
+        omega=omega,
         wavelet='morl'
     )
 
     # Карта вейвлет-преобразования
-    plot_wavelet_map(signal_name, coefficients, frequencies)
+    plot_wavelet_map(signal_name, time, frequencies, coefficients)
 
-    # Анализ частот
-    classification = classify_frequencies(coefficients, frequencies, excitation_frequency)
+    # Классификация частот
+    classification_map = classify_frequencies(coefficients, frequencies, omega)
 
-    # Построение частотной карты
-    plot_frequency_map(signal_name, classification, frequencies, time)
+    # Построение карты классов
+    plot_classification_map(signal_name, classification_map, frequencies, time)
 
 
 if __name__ == "__main__":
+    os.environ["SAVE_PLOT"] = "True"
     main(
-        file_path='data/signal.csv',
-        excitation_frequency=0.5
+        file_path='data/hk100_1_q0_150_gam0_O_kk100000',
+        omega=25
     )

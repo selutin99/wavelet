@@ -1,50 +1,92 @@
 import numpy as np
+import logging
+
+# Настройка логгера
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Константы для классификации
+CLASSIFICATION = {
+    "HARMONIC": 1,
+    "OMEGA_DIV_3": 2,
+    "OMEGA_DIV_2": 3,
+    "INDEPENDENT": 4,
+    "DAMPED": 5,
+    "BIFURCATION": 6,
+    "CHAOS": 7,
+}
 
 
 def classify_frequencies(
         coefficients: np.ndarray,
         frequencies: np.ndarray,
-        excitation_frequency: float
+        time_array: np.ndarray,
+        omega: int
 ) -> np.ndarray:
     """
-    Классифицирует частоты на основе их значений и связи с возбуждающей частотой.
+    Классифицирует частоты на основе вейвлет-коэффициентов и возвращает карту классификации
 
-    :param coefficients: Коэффициенты вейвлет-преобразования, характеризующие амплитуды частот.
-    :param frequencies: Частоты, соответствующие масштабам вейвлет-преобразования.
-    :param excitation_frequency: Основная частота возбуждения (f0).
-
-    :return: Массив классификации частот для каждого времени:
-        - 1: Частота возбуждения (гармоническая)
-        - 2: Частота, равная f0 / 2
-        - 3: Частота, равная f0 / 3
-        - 4: Независимая частота
-        - 5: Затухающие колебания
-        - 6: Бифуркации
-        - 7: Хаос
+    :param coefficients: Вейвлет-коэффициенты
+    :param frequencies: Частоты
+    :param time_array: Массив времени распространения сигнала
+    :param omega: Базовая частота
+    :return: ndarray Карта классов частот
     """
-    eps = 1e-3
-    classification = np.zeros_like(coefficients, dtype=np.int8)
+    num_scales, num_times = coefficients.shape
+    classification_map = np.zeros((num_scales, num_times), dtype=int)
 
-    for t in range(coefficients.shape[1]):
-        for f_idx, freq in enumerate(frequencies):
-            if np.abs(freq - excitation_frequency) < eps:
-                classification[f_idx, t] = 1  # Частота возбуждения
-            elif np.abs(freq - excitation_frequency / 2) < eps:
-                classification[f_idx, t] = 2  # Частота f0/2
-            elif np.abs(freq - excitation_frequency / 3) < eps:
-                classification[f_idx, t] = 3  # Частота f0/3
-            elif (np.abs(freq - excitation_frequency / 2) > eps and
-                  np.abs(freq - excitation_frequency / 3) > eps and
-                  coefficients[f_idx, t] < 0.1):
-                classification[f_idx, t] = 4  # Независимая частота
-            elif (np.abs(freq - excitation_frequency / 3) > eps and
-                  coefficients[f_idx, t] < 0.1):
-                classification[f_idx, t] = 5  # Затухающие колебания
-            elif (np.abs(freq - excitation_frequency) > eps and
-                  np.abs(freq - excitation_frequency / 2) > eps
-                  and np.abs(freq - excitation_frequency / 3) > eps):
-                classification[f_idx, t] = 6  # Бифуркации
-            else:
-                classification[f_idx, t] = 7  # Хаос
+    # Расчет базовых параметров
+    domega = (2 * np.pi) / (num_times * (time_array[1] - time_array[0]))
+    decay_threshold = 0.1  # Порог для затухающих колебаний
+    chaos_threshold = 0.2  # Порог для хаотических сигналов
 
-    return classification
+    for scale_idx, freq in enumerate(frequencies):
+        for time_idx in range(num_times):
+            classification_map[scale_idx, time_idx] = __classify_point(
+                data=coefficients[scale_idx, :],
+                freq=freq,
+                omega=omega,
+                time_idx=time_idx,
+                domega=domega,
+                decay_threshold=decay_threshold,
+                chaos_threshold=chaos_threshold
+            )
+        logger.info(f"Классификация завершена для шкалы {scale_idx + 1} из {num_scales}")
+    return classification_map
+
+
+def __classify_point(
+        data: np.ndarray,
+        freq: float,
+        omega: float,
+        time_idx: int,
+        domega: float,
+        decay_threshold: float,
+        chaos_threshold: float
+) -> int:
+    """
+    Классифицирует конкретную точку данных.
+
+    :param data: Данные для текущей шкалы
+    :param freq: Частота
+    :param omega: Базовая частота
+    :param time_idx: Индекс времени
+    :param domega: Допустимое отклонение частоты
+    :param decay_threshold: Порог для затухающих колебаний
+    :param chaos_threshold: Порог для хаотических сигналов
+    :return: Класс частоты
+    """
+    if freq == omega:
+        return CLASSIFICATION["HARMONIC"]
+    elif np.isclose(freq, omega / 3, atol=domega):
+        return CLASSIFICATION["OMEGA_DIV_3"]
+    elif np.isclose(freq, omega / 2, atol=domega):
+        return CLASSIFICATION["OMEGA_DIV_2"]
+    elif np.std(data) > chaos_threshold:
+        return CLASSIFICATION["CHAOS"]
+    elif np.abs(data[time_idx]) < decay_threshold:
+        return CLASSIFICATION["DAMPED"]
+    elif np.any(np.diff(data) < 0) and np.any(np.diff(data) > 0):
+        return CLASSIFICATION["BIFURCATION"]
+    else:
+        return CLASSIFICATION["INDEPENDENT"]
