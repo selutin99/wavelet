@@ -24,7 +24,7 @@ def plot_wavelet_map(
     plt.tick_params(direction='out', labelsize=14)
     plt.xlabel('$t$', fontsize=16, labelpad=10)
     plt.ylabel('$\\omega$', fontsize=16, labelpad=10)
-    plt.title('Wavelet map of ' + signal_name, fontsize=18)
+    plt.title('Вейвлет-карта сигнала ' + signal_name, fontsize=18)
 
     __save_or_show_plot('wavelet_map_' + signal_name)
 
@@ -57,12 +57,12 @@ def plot_classification_map(
     plt.colorbar(im, label='Классификация')
 
     # Подписи осей
-    plt.xlabel('Время')
-    plt.ylabel('Амплитуда')
-    plt.title(f'Карта сигнала {signal_name}')
+    plt.xlabel('$t$', fontsize=16, labelpad=10)
+    plt.ylabel('$\\omega$', fontsize=16, labelpad=10)
+    plt.title(f'Классификация сигнала {signal_name}')
 
     __add_classification_legend(im)
-    __save_or_show_plot(signal_name)
+    __save_or_show_plot('classification_map_' + signal_name)
 
 
 def __add_classification_legend(im: matplotlib.image.AxesImage):

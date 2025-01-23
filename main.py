@@ -26,19 +26,36 @@ def main(
         omega=omega,
         wavelet='morl'
     )
-
     # Карта вейвлет-преобразования
-    plot_wavelet_map(signal_name, time, frequencies, coefficients)
+    plot_wavelet_map(
+        signal_name=signal_name,
+        time=time,
+        frequencies=frequencies,
+        coefficients=coefficients
+    )
 
     # Классификация частот
-    classification_map = classify_frequencies(coefficients, frequencies, omega)
-
+    classification_map = np.load(f'classification_map_{signal_name}.npy') \
+        if os.getenv('LOAD_CLASSIFICATION_MAP', 'False') == 'True' \
+        else classify_frequencies(
+            signal_name=signal_name,
+            coefficients=coefficients,
+            frequencies=frequencies,
+            time=time,
+            omega=omega
+        )
     # Построение карты классов
-    plot_classification_map(signal_name, classification_map, frequencies, time)
+    plot_classification_map(
+        signal_name=signal_name,
+        classification=classification_map,
+        frequencies=frequencies,
+        time=time
+    )
 
 
 if __name__ == "__main__":
-    os.environ["SAVE_PLOT"] = "True"
+    os.environ['SAVE_PLOT'] = 'True'
+    os.environ['LOAD_CLASSIFICATION_MAP'] = 'True'
     main(
         file_path='data/hk100_1_q0_150_gam0_O_kk100000',
         omega=25
